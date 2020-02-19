@@ -15,7 +15,7 @@ newtype Split a = Split
   , next      :: a
   }
 
-mkSplit :: forall a. Number -> Direction  -> a -> a -> Split a
+mkSplit :: forall a. Number -> Direction -> a -> a -> Split a
 mkSplit ratio direction first next = Split { ratio, direction, first, next}
 
 derive instance functorSplit :: Functor Split
