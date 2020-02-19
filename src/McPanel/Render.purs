@@ -2,16 +2,20 @@ module McPanel.Render where
 
 import Prelude
 
-import McPanel.Model (Direction(..), Layout, Split(..))
+import McPanel.Model (Direction(..), Split(..), Panel)
 import Control.Monad.Free.Extra (FreeF(..), cataFree)
 import React.Basic (JSX)
 import React.Basic.DOM as R
 import Snap.React.Component ((|-), (|=))
 
-render :: forall a. Layout a -> JSX
-render l = R.div |= { style: R.css { height: "100%", width: "100%" } } |- cataFree go l
+render :: forall a. Eq a => Panel a -> JSX
+render { layout, focus } = 
+  R.div 
+  |= { style: R.css { height: "100%", width: "100%" } } 
+  |- cataFree go layout
   where
-  go (Pure a) = mempty
+  go (Pure a) | focus == a = R.div { className: "focused" }
+              | otherwise  = mempty
   go (Free (Split {ratio, direction, first, next})) = 
        R.div |= mkStyle direction ratio         |- inner |- first
     <> R.div |= mkStyle direction (1.0 - ratio) |- inner |- next

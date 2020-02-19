@@ -42,3 +42,5 @@ vsplit = split Vertical
 
 hsplit :: forall a. Eq a => a -> a -> a -> Layout a
 hsplit = split Horizontal
+
+type Panel a = { layout :: Layout a, focus :: a }
