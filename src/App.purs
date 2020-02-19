@@ -2,19 +2,52 @@ module App where
 
 import Prelude
 
+import Data.Lens (over)
+import Data.Lens.Record (prop)
+import Data.Maybe (fromJust)
+import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import McPanel.Model (hsplit, vsplit, Panel)
-import McPanel.Transform (shiftFocus, Direction(..))
 import McPanel.Render (render)
+import McPanel.Transform (shiftFocus, Direction(..))
+import Partial.Unsafe (unsafePartial)
 import React.Basic (JSX)
-import Snap.SYTC.Component (Cmp')
+import Snap.SYTC.Component (Cmp)
+import Web.Event.Event (EventType(..))
+import Web.Event.EventTarget (addEventListener, eventListener)
+import Web.UIEvent.KeyboardEvent as KE
+import Web.HTML (window)
+import Web.HTML.Window as Window
 
-type State = Panel Int
+type State = { panel :: Panel Int, nextId :: Int }
+
+data Action = ShiftFocus Direction
 
 initState :: State
-initState = shiftFocus R { layout, focus: 1 }
+initState = { panel: { layout, focus: 1 }, nextId: 4 }
   where
   layout = pure 1 >>= vsplit 1 2 >>= hsplit 1 3
 
-app :: Cmp' Effect JSX State
-app _ = render
+app :: Cmp Effect JSX State Action
+app _ = render <<< _.panel
+
+reducer :: Action -> State -> State
+reducer (ShiftFocus d) = over (prop _panel) (shiftFocus d)
+
+setupListeners :: (Action -> Effect Unit) -> Effect Unit
+setupListeners u = do
+  w <- Window.toEventTarget <$> window
+  l <- eventListener handleKeyDown
+  addEventListener (EventType "keydown") l true w
+  where
+    handleKeyDown e' = 
+      let e = unsafePartial $ fromJust $ KE.fromEvent e'
+      in case KE.key e of
+        "ArrowLeft"  -> u $ ShiftFocus L
+        "ArrowRight" -> u $ ShiftFocus R
+        "ArrowUp"    -> u $ ShiftFocus U
+        "ArrowDown"  -> u $ ShiftFocus D
+        _  -> pure unit
+
+_panel :: SProxy "panel"
+_panel = SProxy
