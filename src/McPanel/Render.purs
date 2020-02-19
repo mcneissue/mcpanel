@@ -21,7 +21,6 @@ render { layout, focus } =
     <> R.div |= mkStyle direction (1.0 - ratio) |- inner |- next
   inner = R.div |= { className: "inner" }
 
--- This is a PITA because react-basic doesn't just use a string for the style attribute...
 mkStyle :: Direction -> Number -> { style :: R.CSS }
 mkStyle d r = { style }
   where
