@@ -2,7 +2,7 @@ module McPanel.Model where
 
 import Prelude
 
-import Control.Monad.Free (Free)
+import Control.Monad.Free (Free, liftF)
 import Data.Foldable (class Foldable, foldlDefault, foldrDefault)
 import Data.Traversable (class Traversable, traverseDefault)
 
@@ -32,3 +32,13 @@ instance traversableSplit :: Traversable Split
   traverse = traverseDefault
 
 type Layout = Free Split
+
+split :: forall a. Eq a => Direction -> a -> a -> a -> Layout a
+split d f n a | f == a    = liftF $ mkSplit 0.5 d f n
+              | otherwise = pure a
+
+vsplit :: forall a. Eq a => a -> a -> a -> Layout a
+vsplit = split Vertical
+
+hsplit :: forall a. Eq a => a -> a -> a -> Layout a
+hsplit = split Horizontal
