@@ -14,8 +14,8 @@ render { layout, focus } =
   |= { style: R.css { height: "100%", width: "100%" } } 
   |- cataFree go layout
   where
-  go (Pure a) | focus == a = R.div { className: "focused" }
-              | otherwise  = mempty
+  go (Pure a) | focus == a = R.div { className: "focused leaf" }
+              | otherwise  = R.div { className: "leaf"}
   go (Free (Split {ratio, direction, first, next})) = 
        R.div |= mkStyle direction ratio         |- inner |- first
     <> R.div |= mkStyle direction (1.0 - ratio) |- inner |- next
