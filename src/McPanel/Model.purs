@@ -6,10 +6,17 @@ import Control.Monad.Free (Free)
 import Data.Foldable (class Foldable, foldlDefault, foldrDefault)
 import Data.Traversable (class Traversable, traverseDefault)
 
-newtype Split a = Split { ratio :: Number, first :: a, next :: a }
+data Direction = Vertical | Horizontal 
 
-mkSplit :: forall a. Number -> a -> a -> Split a
-mkSplit ratio first next = Split { ratio, first, next }
+newtype Split a = Split 
+  { ratio     :: Number
+  , direction :: Direction 
+  , first     :: a
+  , next      :: a
+  }
+
+mkSplit :: forall a. Number -> Direction  -> a -> a -> Split a
+mkSplit ratio direction first next = Split { ratio, direction, first, next}
 
 derive instance functorSplit :: Functor Split
 
@@ -21,7 +28,7 @@ instance foldableSplit :: Foldable Split
 
 instance traversableSplit :: Traversable Split
   where
-  sequence (Split { ratio, first, next }) = mkSplit ratio <$> first <*> next
+  sequence (Split { ratio, first, next, direction }) = mkSplit ratio direction <$> first <*> next
   traverse = traverseDefault
 
 type Layout = Free Split
