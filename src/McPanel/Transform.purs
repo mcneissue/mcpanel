@@ -40,8 +40,8 @@ chooseShift d (Split { direction, first, next }) = case { first, next } of
       L -> Left b
       _ -> next
   { first: Right (Left _), next: Right (Left _) } -> case d of
-    U -> next
-    R -> next
+    U -> first
     D -> first
     L -> first
+    R -> first
   _ -> first
