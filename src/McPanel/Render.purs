@@ -10,18 +10,21 @@ import Snap.React.Component ((|-), (|=))
 
 data Float = L | R
 
-render :: forall a. Eq a => Show a => Panel a -> JSX
-render { layout, focus } = 
+type Options r = { showPanelInfo :: Boolean | r }
+
+render :: forall a r. Eq a => Show a => Options r -> Panel a -> JSX
+render { showPanelInfo } { layout, focus } = 
   R.div 
   |= { style: R.css { height: "100%", width: "100%" } } 
   |- cataFree go layout
   where
-  go (Pure a) | focus == a = R.div |= { className: "focused leaf" } |- R.text (show a)
-              | otherwise  = R.div |= { className: "leaf"} |- R.text (show a)
+  go (Pure a) | focus == a = R.div |= { className: "focused leaf" } |- R.text (info a)
+              | otherwise  = R.div |= { className: "leaf"} |- R.text (info a)
   go (Free (Split {ratio, direction, first, next})) = 
        R.div |= mkStyle L direction ratio         |- inner |- first
     <> R.div |= mkStyle R direction (1.0 - ratio) |- inner |- next
   inner = R.div |= { className: "inner" }
+  info a = if showPanelInfo then show a else mempty
 
 mkStyle :: Float -> Direction -> Number -> { style :: R.CSS }
 mkStyle f d r = { style }

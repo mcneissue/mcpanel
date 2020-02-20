@@ -67,14 +67,15 @@ toBranchMap = cataFree go
 toRectMap :: forall a. Ord a => Map a (List Direction) -> Coord -> Map a Rect
 toRectMap m br = map (foldl restrict { tl: { x: 0, y: 0 }, br }) m
 
-coordData :: forall a. Ord a => Panel a -> Maybe (Panel Rect)
-coordData p = sequenceRecord { layout, focus }
+panelInfo :: forall a. Ord a => Panel a -> Maybe (Panel { rect :: Rect, directions :: List Direction })
+panelInfo p = sequenceRecord { layout, focus: mk <$> rfocus <*> dfocus }
   where
-  mcs = 
-    let bm = toBranchMap p.layout
-    in toRectMap bm <$> maxCoord bm 
-  layout = mcs >>= \cs -> traverse (flip M.lookup cs) p.layout
-  focus  = mcs >>= M.lookup p.focus
+  bm  = toBranchMap p.layout
+  mcs = toRectMap bm <$> maxCoord bm 
+  layout = mcs >>= \cs -> traverse (\a -> mk <$> M.lookup a cs <*> M.lookup a bm) p.layout
+  rfocus = mcs >>= M.lookup p.focus
+  dfocus = M.lookup p.focus bm 
+  mk r ds = { rect: r, directions: ds }
 
 applyMove :: Direction -> Coord -> Coord
 applyMove d x = case d of
