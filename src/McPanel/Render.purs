@@ -8,6 +8,8 @@ import React.Basic (JSX)
 import React.Basic.DOM as R
 import Snap.React.Component ((|-), (|=))
 
+data Float = L | R
+
 render :: forall a. Eq a => Panel a -> JSX
 render { layout, focus } = 
   R.div 
@@ -17,14 +19,18 @@ render { layout, focus } =
   go (Pure a) | focus == a = R.div { className: "focused leaf" }
               | otherwise  = R.div { className: "leaf"}
   go (Free (Split {ratio, direction, first, next})) = 
-       R.div |= mkStyle direction ratio         |- inner |- first
-    <> R.div |= mkStyle direction (1.0 - ratio) |- inner |- next
+       R.div |= mkStyle L direction ratio         |- inner |- first
+    <> R.div |= mkStyle R direction (1.0 - ratio) |- inner |- next
   inner = R.div |= { className: "inner" }
 
-mkStyle :: Direction -> Number -> { style :: R.CSS }
-mkStyle d r = { style }
+mkStyle :: Float -> Direction -> Number -> { style :: R.CSS }
+mkStyle f d r = { style }
   where
   style = R.css $ case d of
-    Horizontal -> { height: amt, width: "100%", display: "block" }
-    Vertical   -> { height: "100%", width: amt, display: "inline-block" }
-  amt = show (r * 100.0) <> "%" 
+    Horizontal -> { height: amt, width: "100%", float: ""}
+    Vertical   -> { height: "100%", width: amt, float: float f }
+  amt = show (r * 100.0) <> "%"
+
+float :: Float -> String
+float L = "left"
+float R = "right"
