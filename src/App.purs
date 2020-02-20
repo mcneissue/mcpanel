@@ -9,7 +9,7 @@ import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import McPanel.Model (hsplit, vsplit, Panel)
 import McPanel.Render (render)
-import McPanel.Transform (shiftFocus, Direction(..))
+import McPanel.Transform (shiftFocus, Direction(..), coordData)
 import Partial.Unsafe (unsafePartial)
 import React.Basic (JSX)
 import Snap.SYTC.Component (Cmp)
@@ -24,12 +24,12 @@ type State = { panel :: Panel Int, nextId :: Int }
 data Action = ShiftFocus Direction | Split Direction
 
 initState :: State
-initState = { panel: { layout, focus: 1 }, nextId: 4 }
+initState = { panel: { layout, focus: 1 }, nextId: 2 }
   where
-  layout = pure 1 >>= vsplit 1 2 >>= hsplit 1 3
+  layout = pure 1
 
 app :: Cmp Effect JSX State Action
-app _ = render <<< _.panel
+app _ = render <<< coordData <<< _.panel
 
 reducer :: Action -> State -> State
 reducer (ShiftFocus d) s = over (prop _panel) (shiftFocus d) s
