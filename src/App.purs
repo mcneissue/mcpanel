@@ -25,6 +25,16 @@ data Action
   | Split Direction
   | ToggleInfo
 
+type KeyBindings =
+  { verticalSplit   :: String
+  , horizontalSplit :: String
+  , toggleInfo      :: String
+  , navigateUp      :: String
+  , navigateDown    :: String
+  , navigateRight   :: String
+  , navigateLeft    :: String
+  }
+
 initState :: State
 initState = 
   { panel: { layout, focus: 1 }
@@ -33,6 +43,17 @@ initState =
   }
   where
   layout = pure 1
+
+defaultKeyBindings :: KeyBindings
+defaultKeyBindings =
+  { verticalSplit: "v"
+  , horizontalSplit: "h"
+  , toggleInfo: "i"
+  , navigateUp: "ArrowUp"
+  , navigateDown: "ArrowDown"
+  , navigateLeft: "ArrowLeft"
+  , navigateRight: "ArrowRight"
+  }
 
 app :: Cmp Effect JSX State Action
 app _ s = maybe mempty identity $ render s <$> panelInfo s.panel
@@ -48,21 +69,21 @@ reducer (Split d) s = over (prop _nextId) (add 1) <<< over (prop _panel <<< prop
     L -> vsplit s.panel.focus s.nextId
     R -> vsplit s.panel.focus s.nextId
 
-setupListeners :: (Action -> Effect Unit) -> Effect Unit
-setupListeners u = do
+setupListeners :: KeyBindings -> (Action -> Effect Unit) -> Effect Unit
+setupListeners kb u = do
   w <- Window.toEventTarget <$> window
   l <- eventListener $ maybe (pure unit) handleKeyDown <<< map KE.key <<< KE.fromEvent
   addEventListener (EventType "keydown") l true w
   where
-    handleKeyDown k = case k of
-      "ArrowLeft"  -> u $ ShiftFocus L
-      "ArrowRight" -> u $ ShiftFocus R
-      "ArrowUp"    -> u $ ShiftFocus U
-      "ArrowDown"  -> u $ ShiftFocus D
-      "v" -> u $ Split R
-      "h" -> u $ Split U
-      "i" -> u ToggleInfo
-      _  -> pure unit
+    handleKeyDown k
+      | k == kb.navigateLeft    = u $ ShiftFocus L
+      | k == kb.navigateRight   = u $ ShiftFocus R
+      | k == kb.navigateUp      = u $ ShiftFocus U
+      | k == kb.navigateDown    = u $ ShiftFocus D
+      | k == kb.verticalSplit   = u $ Split R
+      | k == kb.horizontalSplit = u $ Split U
+      | k == kb.toggleInfo      = u ToggleInfo
+      | otherwise = pure unit
 
 _panel :: SProxy "panel"
 _panel = SProxy

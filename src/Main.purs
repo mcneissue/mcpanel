@@ -2,7 +2,7 @@ module Main where
 
 import Prelude
 
-import App (app, initState, reducer, setupListeners)
+import App (app, initState, reducer, setupListeners, defaultKeyBindings)
 import Data.Maybe (maybe)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -32,5 +32,5 @@ main = do
     av <- AVar.empty
     let snapper = refSnapper' (\a -> pure <<< reducer a) ref av
     let target  = reactTarget e av
-    liftEffect $ setupListeners (launchAff_ <<< snapper.put)
+    liftEffect $ setupListeners defaultKeyBindings (launchAff_ <<< snapper.put)
     snap snapper (contraHoist launchAff_ app) target
