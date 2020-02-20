@@ -13,11 +13,12 @@ import Data.List (List)
 import Data.List as L
 import Data.Map (Map)
 import Data.Map (lookup, singleton, union) as M
-import Data.Maybe (fromJust, maybe)
+import Data.Maybe (Maybe, maybe)
 import Data.Symbol (SProxy(..))
+import Data.Traversable (traverse)
 import McPanel.Model (Direction(..)) as M
 import McPanel.Model (Panel, Split(..), Layout)
-import Partial.Unsafe (unsafePartial)
+import Record.Extra (sequenceRecord)
 
 data Direction = U | D | L | R
 
@@ -34,19 +35,22 @@ derive instance ordDirection :: Ord Direction
 type Coord = { x :: Int, y :: Int }
 
 shiftFocus :: forall a. Ord a => Direction -> Panel a -> Panel a
-shiftFocus d p = maybe p (\a -> p { focus = a }) $ findNewFocus newCoord rects
+shiftFocus d p = maybe p (\a -> p { focus = a }) do
+  c <- newCoord
+  rs <- rects
+  findNewFocus c rs
   where
-  newCoord = applyMove d case d of
-    U -> focusedRect.tl
-    D -> br' focusedRect
-    L -> focusedRect.tl
-    R -> br' focusedRect
+  newCoord = map (applyMove d) case d of
+    U -> map _.tl focusedRect
+    D -> map br' focusedRect
+    L -> map _.tl focusedRect
+    R -> map br' focusedRect
   rects = rectMap p.layout
-  focusedRect = unsafePartial $ fromJust $ M.lookup p.focus rects
+  focusedRect = rects >>= M.lookup p.focus
   findNewFocus c = map _.index <<< findWithIndex (\_ -> inRect c)
 
-rectMap :: forall a. Ord a => Layout a -> Map a Rect
-rectMap l = let bm = toBranchMap l in toRectMap (maxCoord bm) bm
+rectMap :: forall a. Ord a => Layout a -> Maybe (Map a Rect)
+rectMap l = let bm = toBranchMap l in toRectMap bm <$> maxCoord bm 
 
 toBranchMap :: forall a. Ord a => Layout a -> Map a (List Direction)
 toBranchMap = cataFree go
@@ -60,16 +64,17 @@ toBranchMap = cataFree go
       M.Horizontal -> { l: U, r: D }
       M.Vertical   -> { l: L, r: R }
 
-toRectMap :: forall a. Ord a => Coord -> Map a (List Direction) -> Map a Rect
-toRectMap br = map (foldl restrict { tl: { x: 0, y: 0 }, br })
+toRectMap :: forall a. Ord a => Map a (List Direction) -> Coord -> Map a Rect
+toRectMap m br = map (foldl restrict { tl: { x: 0, y: 0 }, br }) m
 
-coordData :: forall a. Ord a => Panel a -> Panel Rect
-coordData p = { layout, focus }
+coordData :: forall a. Ord a => Panel a -> Maybe (Panel Rect)
+coordData p = sequenceRecord { layout, focus }
   where
-  cs = let bm = toBranchMap p.layout in toRectMap (maxCoord bm) bm
-  --cs = toBranchMap p.layout
-  layout = map (\x -> unsafePartial $ fromJust $ M.lookup x cs) p.layout
-  focus = unsafePartial $ fromJust $ M.lookup p.focus cs
+  mcs = 
+    let bm = toBranchMap p.layout
+    in toRectMap bm <$> maxCoord bm 
+  layout = mcs >>= \cs -> traverse (flip M.lookup cs) p.layout
+  focus  = mcs >>= M.lookup p.focus
 
 applyMove :: Direction -> Coord -> Coord
 applyMove d x = case d of
@@ -88,13 +93,13 @@ spans ds =
     D -> true
     _ -> false
 
-maxCoord :: forall a. Map a (List Direction) -> Coord
-maxCoord m = { x: pow 2 hmax, y: pow 2 vmax }
+maxCoord :: forall a. Map a (List Direction) -> Maybe Coord
+maxCoord m = sequenceRecord { x: map (pow 2) hmax, y: map (pow 2) vmax }
   where
   vmax = go _.vertical
   hmax = go _.horizontal
-  go f = L.length <<< f <<< spans $ dmax f
-  dmax f = unsafePartial $ fromJust $ maximumBy (comparing $ spans >>> f >>> L.length) m
+  go f = L.length <<< f <<< spans <$> dmax f
+  dmax f = maximumBy (comparing $ spans >>> f >>> L.length) m
 
 type Rect = { tl :: Coord, br :: Coord }
 

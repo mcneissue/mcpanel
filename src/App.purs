@@ -4,13 +4,12 @@ import Prelude
 
 import Data.Lens (over)
 import Data.Lens.Record (prop)
-import Data.Maybe (fromJust)
+import Data.Maybe (maybe)
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
 import McPanel.Model (hsplit, vsplit, Panel)
 import McPanel.Render (render)
 import McPanel.Transform (shiftFocus, Direction(..), coordData)
-import Partial.Unsafe (unsafePartial)
 import React.Basic (JSX)
 import Snap.SYTC.Component (Cmp)
 import Web.Event.Event (EventType(..))
@@ -29,7 +28,7 @@ initState = { panel: { layout, focus: 1 }, nextId: 2 }
   layout = pure 1
 
 app :: Cmp Effect JSX State Action
-app _ = render <<< coordData <<< _.panel
+app _ s = maybe mempty identity $ render <$> coordData s.panel
 
 reducer :: Action -> State -> State
 reducer (ShiftFocus d) s = over (prop _panel) (shiftFocus d) s
@@ -44,19 +43,17 @@ reducer (Split d) s = over (prop _nextId) (add 1) <<< over (prop _panel <<< prop
 setupListeners :: (Action -> Effect Unit) -> Effect Unit
 setupListeners u = do
   w <- Window.toEventTarget <$> window
-  l <- eventListener handleKeyDown
+  l <- eventListener $ maybe (pure unit) handleKeyDown <<< map KE.key <<< KE.fromEvent
   addEventListener (EventType "keydown") l true w
   where
-    handleKeyDown e' = 
-      let e = unsafePartial $ fromJust $ KE.fromEvent e'
-      in case KE.key e of
-        "ArrowLeft"  -> u $ ShiftFocus L
-        "ArrowRight" -> u $ ShiftFocus R
-        "ArrowUp"    -> u $ ShiftFocus U
-        "ArrowDown"  -> u $ ShiftFocus D
-        "v" -> u $ Split R
-        "h" -> u $ Split U
-        _  -> pure unit
+    handleKeyDown k = case k of
+      "ArrowLeft"  -> u $ ShiftFocus L
+      "ArrowRight" -> u $ ShiftFocus R
+      "ArrowUp"    -> u $ ShiftFocus U
+      "ArrowDown"  -> u $ ShiftFocus D
+      "v" -> u $ Split R
+      "h" -> u $ Split U
+      _  -> pure unit
 
 _panel :: SProxy "panel"
 _panel = SProxy
