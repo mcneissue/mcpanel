@@ -2,26 +2,38 @@ module McPanel.Render where
 
 import Prelude
 
-import McPanel.Model (Direction(..), Layout, Split(..))
+import McPanel.Model (Direction(..), Split(..), Panel)
 import Control.Monad.Free.Extra (FreeF(..), cataFree)
 import React.Basic (JSX)
 import React.Basic.DOM as R
 import Snap.React.Component ((|-), (|=))
 
-render :: forall a. Layout a -> JSX
-render l = R.div |= { style: R.css { height: "100%", width: "100%" } } |- cataFree go l
-  where
-  go (Pure a) = mempty
-  go (Free (Split {ratio, direction, first, next})) = 
-       R.div |= mkStyle direction ratio         |- inner |- first
-    <> R.div |= mkStyle direction (1.0 - ratio) |- inner |- next
-  inner = R.div |= { className: "inner" }
+data Float = L | R
 
--- This is a PITA because react-basic doesn't just use a string for the style attribute...
-mkStyle :: Direction -> Number -> { style :: R.CSS }
-mkStyle d r = { style }
+type Options r = { showPanelInfo :: Boolean | r }
+
+render :: forall a r. Eq a => Show a => Options r -> Panel a -> JSX
+render { showPanelInfo } { layout, focus } = 
+  R.div 
+  |= { style: R.css { height: "100%", width: "100%" } } 
+  |- cataFree go layout
+  where
+  go (Pure a) | focus == a = R.div |= { className: "focused leaf" } |- R.text (info a)
+              | otherwise  = R.div |= { className: "leaf"} |- R.text (info a)
+  go (Free (Split {ratio, direction, first, next})) = 
+       R.div |= mkStyle L direction ratio         |- inner |- first
+    <> R.div |= mkStyle R direction (1.0 - ratio) |- inner |- next
+  inner = R.div |= { className: "inner" }
+  info a = if showPanelInfo then show a else mempty
+
+mkStyle :: Float -> Direction -> Number -> { style :: R.CSS }
+mkStyle f d r = { style }
   where
   style = R.css $ case d of
-    Horizontal -> { height: amt, width: "100%", display: "block" }
-    Vertical   -> { height: "100%", width: amt, display: "inline-block" }
-  amt = show (r * 100.0) <> "%" 
+    Horizontal -> { height: amt, width: "100%", float: ""}
+    Vertical   -> { height: "100%", width: amt, float: float f }
+  amt = show (r * 100.0) <> "%"
+
+float :: Float -> String
+float L = "left"
+float R = "right"

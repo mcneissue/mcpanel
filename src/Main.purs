@@ -2,15 +2,16 @@ module Main where
 
 import Prelude
 
-import App (app, initState)
+import App (app, initState, reducer, setupListeners, defaultKeyBindings)
 import Data.Maybe (maybe)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Aff.AVar as AVar
+import Effect.Class (liftEffect)
 import Effect.Exception (throwException, error)
 import Effect.Ref as Ref
 import Snap (snap)
-import Snap.React (reactTarget, refSnapper)
+import Snap.React (reactTarget, refSnapper')
 import Snap.SYTC.Component (contraHoist)
 import Web.DOM (Element)
 import Web.DOM.NonElementParentNode (getElementById)
@@ -29,6 +30,7 @@ main = do
   ref <- Ref.new initState
   launchAff_ do
     av <- AVar.empty
-    let snapper = refSnapper ref av
+    let snapper = refSnapper' (\a -> pure <<< reducer a) ref av
     let target  = reactTarget e av
+    liftEffect $ setupListeners defaultKeyBindings (launchAff_ <<< snapper.put)
     snap snapper (contraHoist launchAff_ app) target
